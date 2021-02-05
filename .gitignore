@@ -4,3 +4,4 @@ obj
 .Ds_Store
 appsetting.json
 *.db
+node_modules
