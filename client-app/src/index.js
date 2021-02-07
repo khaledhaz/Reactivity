@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
+import './app/layouts/index.css';
+import App from './app/layouts/App.tsx';
 import reportWebVitals from './reportWebVitals';
 import "semantic-ui-css/semantic.min.css";
 
