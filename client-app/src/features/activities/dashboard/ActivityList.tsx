@@ -5,13 +5,14 @@ import { IActivity } from "./../../../app/models/activity";
 import { observer } from "mobx-react-lite";
 import { useContext } from "react";
 import ActivityStore from "../../../app/stores/activityStore";
+import { Link } from "react-router-dom";
 
 interface IProps {
   activity: IActivity;
 }
 const ActivityList: React.FC<IProps> = ({ activity }) => {
   const activityStore = useContext(ActivityStore);
-  const { selectActivity } = activityStore;
+
   return (
     <Segment clearing>
       <Item.Group divided>
@@ -30,9 +31,10 @@ const ActivityList: React.FC<IProps> = ({ activity }) => {
             </Item.Description>
             <Item.Extra>
               <Button
+                as={Link}
+                to={`/activities/${activity.id}`}
                 floated="right"
                 content="View"
-                onClick={() => selectActivity(activity.id)}
                 color="blue"
               />
               <Button
