@@ -1,57 +1,46 @@
-import { observer } from "mobx-react-lite";
-import React, { useContext } from "react";
-import { useEffect } from "react";
-import { RouteComponentProps } from "react-router";
-import { Button, Card, Image } from "semantic-ui-react";
-import { LoadingComponent } from "../../../app/layouts/LoadingComponent";
-
+import React, { useContext, useEffect } from "react";
+import { Grid } from "semantic-ui-react";
 import ActivityStore from "../../../app/stores/activityStore";
-import { Link } from "react-router-dom";
+import { observer } from "mobx-react-lite";
+import { RouteComponentProps } from "react-router";
+import { LoadingComponent } from "../../../app/layouts/LoadingComponent";
+import ActivityDetailedHeader from "./ActivityDetailedHeader";
+import ActivityDetailedInfo from "./ActivityDetailedInfo";
+import ActivityDetailedChat from "./ActivityDetailedChat";
+import ActivityDetailedSidebar from "./ActivityDetailedSidebar";
 
 interface DetailParams {
   id: string;
 }
+
 const ActivityDetails: React.FC<RouteComponentProps<DetailParams>> = ({
   match,
-  history,
 }) => {
   const activityStore = useContext(ActivityStore);
-  const { activity, loadActivity } = activityStore;
+  const { activity, loadActivity, loadingInitial } = activityStore;
+
   useEffect(() => {
-    activityStore.loadActivity(match.params.id);
-  }, [activityStore, loadActivity, match.params.id]);
-  if (activityStore.loadingInitial || !activityStore.activity)
-    return <LoadingComponent content="Loading activities..." />;
+    loadActivity(match.params.id);
+  }, [loadActivity, match.params.id]);
+
+  if (loadingInitial || activity == null) {
+    console.log("from detaild " + activity);
+    console.log("from detaild " + loadingInitial);
+    return <LoadingComponent content="Loading activity..." />;
+  }
+
   return (
-    <Card fluid>
-      <Image
-        src={`/assets/categoryImages/${activity!.category}.jpg`}
-        wrapped
-        ui={false}
-      />
-      <Card.Content>
-        <Card.Header>{activity!.title}</Card.Header>
-        <Card.Meta>{activity!.date}</Card.Meta>
-        <Card.Description>{activity!.description}</Card.Description>
-      </Card.Content>
-      <Card.Content extra>
-        <Button.Group widths={2}>
-          <Button
-            as={Link}
-            to={`/manage/${activity?.id}`}
-            basic
-            color="blue"
-            content="Edit"
-          />
-          <Button
-            basic
-            color="grey"
-            onClick={() => history.push("/activities")}
-            content="Cancel"
-          />
-        </Button.Group>
-      </Card.Content>
-    </Card>
+    <Grid>
+      <Grid.Column width={10}>
+        <ActivityDetailedHeader activity={activity} />
+        <ActivityDetailedInfo activity={activity} />
+        <ActivityDetailedChat />
+      </Grid.Column>
+      <Grid.Column width={6}>
+        <ActivityDetailedSidebar />
+      </Grid.Column>
+    </Grid>
   );
 };
+
 export default observer(ActivityDetails);

@@ -1,35 +1,48 @@
 import {
-  action,
   observable,
-  makeAutoObservable,
+  action,
   computed,
   configure,
   runInAction,
+  makeAutoObservable,
 } from "mobx";
-import { SyntheticEvent } from "react";
-
-import { createContext } from "react";
+import { createContext, SyntheticEvent } from "react";
+import { IActivity } from "../models/activity";
 import agent from "../api/agent";
-import { IActivity } from "./../models/activity";
 
 configure({ enforceActions: "always" });
+
 class ActivityStore {
   constructor() {
     makeAutoObservable(this);
   }
   @observable activityRegistry = new Map();
-  @observable activities: IActivity[] = [];
-  @observable loadingInitial = false;
   @observable activity: IActivity | null = null;
-  @observable editMode = false;
+  @observable loadingInitial = false;
   @observable submitting = false;
   @observable target = "";
 
   @computed get activitiesByDate() {
-    return Array.from(this.activityRegistry.values()).sort(
-      (a, b) => Date.parse(a.date) - Date.parse(b.date)
+    return this.groupActivitiesByDate(
+      Array.from(this.activityRegistry.values())
     );
   }
+
+  groupActivitiesByDate(activities: IActivity[]) {
+    const sortedActivities = activities.sort(
+      (a, b) => Date.parse(a.date) - Date.parse(b.date)
+    );
+    return Object.entries(
+      sortedActivities.reduce((activities, activity) => {
+        const date = activity.date.split("T")[0];
+        activities[date] = activities[date]
+          ? [...activities[date], activity]
+          : [activity];
+        return activities;
+      }, {} as { [key: string]: IActivity[] })
+    );
+  }
+
   @action loadActivities = async () => {
     this.loadingInitial = true;
     try {
@@ -47,6 +60,7 @@ class ActivityStore {
       });
     }
   };
+
   @action loadActivity = async (id: string) => {
     let activity = this.getActivity(id);
     if (activity) {
@@ -57,32 +71,44 @@ class ActivityStore {
         activity = await agent.Activities.details(id);
         runInAction(() => {
           this.activity = activity;
+
           this.loadingInitial = false;
+          console.log(this.activity);
+          console.log(this.loadingInitial);
         });
       } catch (error) {
+        runInAction(() => {
+          this.loadingInitial = false;
+        });
         console.log(error);
-        this.loadingInitial = false;
       }
     }
   };
+
   @action clearActivity = () => {
     this.activity = null;
   };
+
   getActivity = (id: string) => {
     return this.activityRegistry.get(id);
   };
+
   @action createActivity = async (activity: IActivity) => {
     this.submitting = true;
     try {
       await agent.Activities.create(activity);
       runInAction(() => {
         this.activityRegistry.set(activity.id, activity);
-        this.editMode = false;
-        this.activity = activity;
         this.submitting = false;
       });
-    } catch (error) {}
+    } catch (error) {
+      runInAction(() => {
+        this.submitting = false;
+      });
+      console.log(error);
+    }
   };
+
   @action editActivity = async (activity: IActivity) => {
     this.submitting = true;
     try {
@@ -90,28 +116,16 @@ class ActivityStore {
       runInAction(() => {
         this.activityRegistry.set(activity.id, activity);
         this.activity = activity;
-        this.editMode = false;
         this.submitting = false;
       });
     } catch (error) {
-      this.submitting = false;
+      runInAction(() => {
+        this.submitting = false;
+      });
+      console.log(error);
     }
   };
-  @action openEditForm = (id: string) => {
-    this.activity = this.activityRegistry.get(id);
-    this.editMode = true;
-  };
-  @action openCreateForm = () => {
-    this.editMode = true;
-    this.activity = null;
-  };
-  @action selectActivity = (id: string) => {
-    this.activity = this.activityRegistry.get(id);
-    this.editMode = false;
-  };
-  @action cancelFormOpen = () => {
-    this.editMode = false;
-  };
+
   @action deleteActivity = async (
     event: SyntheticEvent<HTMLButtonElement>,
     id: string
@@ -126,9 +140,13 @@ class ActivityStore {
         this.target = "";
       });
     } catch (error) {
-      this.submitting = false;
-      this.target = "";
+      runInAction(() => {
+        this.submitting = false;
+        this.target = "";
+      });
+      console.log(error);
     }
   };
 }
+
 export default createContext(new ActivityStore());
